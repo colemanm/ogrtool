@@ -1,0 +1,4 @@
+elevation,POINT
+parcels,MULTIPOLYGON
+buildings,MULTIPOLYGON
+contours,MULTILINESTRING
