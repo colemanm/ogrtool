@@ -63,7 +63,7 @@ class OgrTool < Thor
       'user'      => options[:user],
       'dbname'    => options[:dbname],
       'port'      => options[:port],
-      'encoding'  => "'-c client_encoding=#{options[:encoding]}'"
+      'options'   => "'-c client_encoding=#{options[:encoding]}'"
     }.reject{|k,v| v.nil?})
     db_connection = db_config.reject{|k,v| v.nil?}.map{ |k,v| "#{k}=#{v}" }.join(' ')
   	layer = options[:layer] if options[:layer]
