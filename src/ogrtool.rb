@@ -9,12 +9,12 @@ require 'yaml'
 class OgrTool < Thor
 
   desc "clip", "Clip an area from a shapefile. Use 'x_min y_min x_max y_max' notation to define the bounding box."
-  method_option :boundingbox, :aliases => '-b', :desc => "Define the bounding area (e.g. \"498438 395921 566498 471747\")", :required => true
+  method_option :bbox, :aliases => '-b', :desc => "Define the bounding area (e.g. \"498438 395921 566498 471747\")", :required => true
   method_option :file, :aliases => '-f', :desc => "File to clip an area from", :required => true
   def clip
     input_file = options[:file]
     output_file = "#{File.join(File.dirname(options[:file]), File.basename(options[:file], File.extname(options[:file])))}_clip.shp"
-    bb = options[:boundingbox]
+    bb = options[:bbox]
     `ogr2ogr -f "ESRI Shapefile" #{output_file} #{input_file} -clipsrc #{bb}`
   end
   
@@ -26,6 +26,7 @@ class OgrTool < Thor
   method_option :dbname, :aliases => '-d', :desc => "PostGIS database to connect to"
   method_option :port, :aliases => '-p', :desc => "PostgreSQL server port number"
   def clip2shp
+    bb = options[:bbox]
     db_config = YAML.load(File.read(File.expand_path('~/.postgis')))
     db_config.merge!({
       'host'      => options[:host],
@@ -36,7 +37,7 @@ class OgrTool < Thor
     db_connection = db_config.reject{|k,v| v.nil?}.map{ |k,v| "#{k}=#{v}" }.join(' ')
     File.open("#{options[:list]}").each_line do |line|
       layer = line.strip
-      `ogr2ogr -f "ESRI Shapefile" #{layer}.shp PG:"#{db_connection}" #{layer}`
+      `ogr2ogr -f "ESRI Shapefile" #{layer}.shp PG:"#{db_connection}" #{layer} -clipsrc #{bb} -lco ENCODING=UTF-8`
     end
   end
 
