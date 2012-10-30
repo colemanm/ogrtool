@@ -50,6 +50,7 @@ class OgrTool < Thor
   method_option :host, :aliases => '-h', :desc => "Database server hostname"
   method_option :user, :aliases => '-u', :desc => "Username to connect to database"
   method_option :dbname, :aliases => '-d', :desc => "PostGIS database to connect to"
+  method_option :nln, :aliases => '-n', :desc => "Destination layer name (can include schema, e.g. 'schema.layername')"
   method_option :port, :aliases => '-p', :desc => "PostgreSQL server port number"
   method_option :encoding, :aliases => '-e', :desc => "Specify client encoding (e.g. latin1, UTF8, cp936, etc.)"
   method_option :type, :aliases => '-T', :desc => "Cast to a new layer type, such as multipolygon or multilinestring"
@@ -66,17 +67,18 @@ class OgrTool < Thor
       'options'   => "'-c client_encoding=#{options[:encoding]}'"
     }.reject{|k,v| v.nil?})
     db_connection = db_config.reject{|k,v| v.nil?}.map{ |k,v| "#{k}=#{v}" }.join(' ')
-  	layer = options[:layer] if options[:layer]
-  	nlt = "-nlt #{options[:type]}" if options[:type]
-  	lco = "-lco GEOMETRY_NAME=#{options[:geometry]}" if options[:geometry]
-  	srid_params = []
-  	  srid_params << "-s_srs EPSG:#{options[:source]}" if options[:source]
-  	  srid_params << "-t_srs EPSG:#{options[:transform]}" if options[:transform]
-  	  srid_params << "-a_srs EPSG:#{options[:assign]}" if options[:assign]
-  	  srid_params = srid_params.join(' ')
-  	overwrite = "-overwrite" if options[:overwrite]
-  	skipfailures = "-skipfailures" if options[:skipfailures]
-  	`ogr2ogr -f "PostgreSQL" #{srid_params} PG:"#{db_connection}" #{options[:file]} #{layer} #{nlt} #{lco} #{overwrite} #{skipfailures}`
+    layer = options[:layer] if options[:layer]
+    nlt = "-nlt #{options[:type]}" if options[:type]
+    nln = "-nln #{options[:nln]}" if options[:nln]
+    lco = "-lco GEOMETRY_NAME=#{options[:geometry]}" if options[:geometry]
+    srid_params = []
+      srid_params << "-s_srs EPSG:#{options[:source]}" if options[:source]
+      srid_params << "-t_srs EPSG:#{options[:transform]}" if options[:transform]
+      srid_params << "-a_srs EPSG:#{options[:assign]}" if options[:assign]
+      srid_params = srid_params.join(' ')
+    overwrite = "-overwrite" if options[:overwrite]
+    skipfailures = "-skipfailures" if options[:skipfailures]
+    `ogr2ogr -f "PostgreSQL" #{srid_params} PG:"#{db_connection}" #{options[:file]} #{layer} #{nlt} #{nln} #{lco} #{overwrite} #{skipfailures}`
   end
 
   desc "shproject", "Reproject a shapefile using source and destination SRS EPSG codes."
@@ -84,10 +86,10 @@ class OgrTool < Thor
   method_option :s_srs, :aliases => '-s', :desc => "Source data SRS", :required => true
   method_option :t_srs, :aliases => '-t', :desc => "Destination data SRS", :required => true
   def shproject
-  	input_file = options[:inputfile]
-  	output_file = "#{File.join(File.dirname(options[:inputfile]), File.basename(options[:inputfile], File.extname(options[:inputfile])))}_project.shp"
+    input_file = options[:inputfile]
+    output_file = "#{File.join(File.dirname(options[:inputfile]), File.basename(options[:inputfile], File.extname(options[:inputfile])))}_project.shp"
 
-  	`ogr2ogr -f "ESRI Shapefile" -s_srs EPSG:#{options[:s_srs]} -t_srs EPSG:#{options[:t_srs]} #{output_file} #{input_file}`
+    `ogr2ogr -f "ESRI Shapefile" -s_srs EPSG:#{options[:s_srs]} -t_srs EPSG:#{options[:t_srs]} #{output_file} #{input_file}`
   end
 
   desc "features", "Get the feature count for a dataset."
@@ -103,14 +105,6 @@ class OgrTool < Thor
     file = options[:file]
     basename = "#{File.basename(options[:file], File.extname(options[:file]))}"
     puts `ogrinfo -so #{file} #{basename} | grep -w Geometry | sed 's/Geometry: //g'`
-  end
-
-  desc "parse", "Do something with a bunch of files in a text file"
-  method_option :file, :aliases => '-f', :desc => "Text file to parse", :required => true
-  def parse
-    File.open(options[:file]).each_line do |line|
-      puts line
-    end
   end
   
 end
