@@ -52,7 +52,7 @@ class OgrTool < Thor
   method_option :dbname, :aliases => '-d', :desc => "PostGIS database to connect to"
   method_option :nln, :aliases => '-n', :desc => "Destination layer name (can include schema, e.g. 'schema.layername')"
   method_option :port, :aliases => '-p', :desc => "PostgreSQL server port number"
-  method_option :encoding, :aliases => '-e', :desc => "Specify client encoding (e.g. latin1, UTF8, cp936, etc.)"
+  method_option :encoding, :aliases => '-e', :desc => "Specify client encoding (e.g. latin1, UTF8, cp936, etc.)", :default => "UTF-8"
   method_option :type, :aliases => '-T', :desc => "Cast to a new layer type, such as multipolygon or multilinestring"
   method_option :geometry, :aliases => '-g', :desc => "Set a custom geometry column name"
   method_option :overwrite, :aliases => '-O', :desc => "Overwrite current layer(s)", :type => :boolean
