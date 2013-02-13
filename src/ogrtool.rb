@@ -9,7 +9,7 @@ require 'yaml'
 class OgrTool < Thor
 
   desc "clip", "Clip an area from a shapefile. Use 'x_min y_min x_max y_max' notation to define the bounding box."
-  method_option :bbox, :aliases => '-b', :desc => "Define the bounding area (e.g. \"498438 395921 566498 471747\")", :required => true
+  method_option :bbox, :aliases => '-b', :desc => "Define the bounding area (e.g. \"498438 395921 566498 471747\" in dataset units)", :required => true
   method_option :file, :aliases => '-f', :desc => "File to clip an area from", :required => true
   def clip
     input_file = options[:file]
@@ -27,46 +27,27 @@ class OgrTool < Thor
   method_option :port, :aliases => '-p', :desc => "PostgreSQL server port number"
   def clip2shp
     bb = options[:bbox]
-    db_config = YAML.load(File.read(File.expand_path('~/.postgis')))
-    db_config.merge!({
-      'host'      => options[:host],
-      'user'      => options[:user],
-      'dbname'    => options[:dbname],
-      'port'      => options[:port],
-    }.reject{|k,v| v.nil?})
-    db_connection = db_config.reject{|k,v| v.nil?}.map{ |k,v| "#{k}=#{v}" }.join(' ')
     File.open("#{options[:list]}").each_line do |line|
       layer = line.strip
-      `ogr2ogr -f "ESRI Shapefile" #{layer}.shp PG:"#{db_connection}" #{layer} -clipsrc #{bb} -lco ENCODING=UTF-8`
+      `ogr2ogr -f "ESRI Shapefile" #{layer}.shp PG:"#{db_config(options)}" #{layer} -clipsrc #{bb} -lco ENCODING=UTF-8`
     end
   end
 
   desc "topg", "Import a GIS data file into PostGIS."
   method_option :file, :aliases => '-f', :desc => "File to import", :required => true
   method_option :layer, :aliases => '-l', :desc => "Layer name to import"
+  method_option :connection, :aliases => '-c', :desc => "Connection name (defined in ~/.postgres)", :default => 'localhost'
   method_option :source, :aliases => '-s', :desc => "Source SRID to convert from"
   method_option :transform, :aliases => '-t', :desc => "Destination SRID to tranform to"
   method_option :assign, :aliases => '-a', :desc => "Assign this SRID on table creation"
-  method_option :host, :aliases => '-h', :desc => "Database server hostname"
-  method_option :user, :aliases => '-u', :desc => "Username to connect to database"
   method_option :dbname, :aliases => '-d', :desc => "PostGIS database to connect to"
   method_option :nln, :aliases => '-n', :desc => "Destination layer name (can include schema, e.g. 'schema.layername')"
-  method_option :port, :aliases => '-p', :desc => "PostgreSQL server port number"
   method_option :encoding, :aliases => '-e', :desc => "Specify client encoding (e.g. latin1, UTF8, cp936, etc.)", :default => "UTF-8"
   method_option :type, :aliases => '-T', :desc => "Cast to a new layer type, such as multipolygon or multilinestring"
   method_option :geometry, :aliases => '-g', :desc => "Set a custom geometry column name"
   method_option :overwrite, :aliases => '-O', :desc => "Overwrite current layer(s)", :type => :boolean
   method_option :skipfailures, :aliases => '-S', :desc => "Skip failed row imports", :type => :boolean
   def topg
-    db_config = YAML.load(File.read(File.expand_path('~/.postgis')))
-    db_config.merge!({
-      'host'      => options[:host],
-      'user'      => options[:user],
-      'dbname'    => options[:dbname],
-      'port'      => options[:port],
-      'options'   => "'-c client_encoding=#{options[:encoding]}'"
-    }.reject{|k,v| v.nil?})
-    db_connection = db_config.reject{|k,v| v.nil?}.map{ |k,v| "#{k}=#{v}" }.join(' ')
     layer = options[:layer] if options[:layer]
     nlt = "-nlt #{options[:type]}" if options[:type]
     nln = "-nln #{options[:nln]}" if options[:nln]
@@ -78,7 +59,7 @@ class OgrTool < Thor
       srid_params = srid_params.join(' ')
     overwrite = "-overwrite" if options[:overwrite]
     skipfailures = "-skipfailures" if options[:skipfailures]
-    `ogr2ogr -f "PostgreSQL" #{srid_params} PG:"#{db_connection}" #{options[:file]} #{layer} #{nlt} #{nln} #{lco} #{overwrite} #{skipfailures}`
+    `ogr2ogr -f "PostgreSQL" #{srid_params} PG:"#{db_config(options)}" #{options[:file]} #{layer} #{nlt} #{nln} #{lco} #{overwrite} #{skipfailures}`
   end
 
   desc "shproject", "Reproject a shapefile using source and destination SRS EPSG codes."
@@ -92,19 +73,30 @@ class OgrTool < Thor
     `ogr2ogr -f "ESRI Shapefile" -s_srs EPSG:#{options[:s_srs]} -t_srs EPSG:#{options[:t_srs]} #{output_file} #{input_file}`
   end
 
-  desc "features", "Get the feature count for a dataset."
+  desc "features", "Get the feature count from a file."
   method_option :file, :aliases => '-f', :desc => "File to count features from", :required => true
   method_option :layer, :aliases => '-l', :desc => "Layer name"
   def features
     puts `ogrinfo -so -al #{options[:file]} #{options[:layer]} | grep -w "Feature Count" | sed 's/Feature Count: //g'`
   end
 
-  desc "shpgeom", "Get the geometry type for a shapefile."
+  desc "shpgeom", "Get the geometry type for a file."
   method_option :file, :aliases => '-f', :desc => "File to get geometry from", :required => true
   def shpgeom
     file = options[:file]
     basename = "#{File.basename(options[:file], File.extname(options[:file]))}"
     puts `ogrinfo -so #{file} #{basename} | grep -w Geometry | sed 's/Geometry: //g'`
+  end
+
+  no_tasks do
+    def db_config(options)
+      config = YAML.load(File.read(File.expand_path('~/.postgres')))[options[:connection]]
+      config.merge!({
+        'dbname' => options[:dbname],
+        'options'   => "'-c client_encoding=#{options[:encoding]}'"
+      }.reject{|k,v| v.nil?})
+      config.reject{|k,v| v.nil?}.map{ |k,v| "#{k}=#{v}" }.join(' ')
+    end
   end
   
 end
