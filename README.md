@@ -15,6 +15,7 @@ Here you can define custom Postgres database connections, so you don't have to p
 Then install (defaults to `~/local/ogrtool`):
 
 ```shell
+bundle
 make
 ```
 
