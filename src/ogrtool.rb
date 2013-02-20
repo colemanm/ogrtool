@@ -81,11 +81,18 @@ class OgrTool < Thor
   end
 
   desc "shpgeom", "Get the geometry type for a file."
-  method_option :file, :aliases => '-f', :desc => "File to get geometry from", :required => true
+  method_option :file, :aliases => '-f', :desc => "File to get geometry from"
+  method_option :list, :aliases => '-l', :desc => "List of shapefiles to parse (file.shp on each line)"
   def shpgeom
     file = options[:file]
-    basename = "#{File.basename(options[:file], File.extname(options[:file]))}"
-    puts `ogrinfo -so #{file} #{basename} | grep -w Geometry | sed 's/Geometry: //g'`
+    if options[:file]
+      puts `ogrinfo -so #{file} #{basename} | grep -w Geometry | sed 's/Geometry: //g'`
+    elsif options[:list]
+      File.open("#{options[:list]}").each_line do |line|
+        line.strip!
+        puts `ogrinfo -so -al #{line} | grep -w Geometry | sed 's/Geometry: /#{line}: /g'`
+      end
+    end
   end
 
   no_tasks do
