@@ -64,13 +64,13 @@ class OgrTool < Thor
 
   desc "shproject", "Reproject a shapefile using source and destination SRS EPSG codes."
   method_option :inputfile, :aliases => '-f', :desc => "File to reproject", :required => true
-  method_option :s_srs, :aliases => '-s', :desc => "Source data SRS", :required => true
-  method_option :t_srs, :aliases => '-t', :desc => "Destination data SRS", :required => true
+  method_option :source, :aliases => '-s', :desc => "Source data SRS"
+  method_option :transform, :aliases => '-t', :desc => "Destination data SRS"
+  method_option :assign, :aliases => '-a', :desc => "Assign data SRS"
   def shproject
     input_file = options[:inputfile]
     output_file = "#{File.join(File.dirname(options[:inputfile]), File.basename(options[:inputfile], File.extname(options[:inputfile])))}_project.shp"
-
-    `ogr2ogr -f "ESRI Shapefile" -s_srs EPSG:#{options[:s_srs]} -t_srs EPSG:#{options[:t_srs]} #{output_file} #{input_file}`
+    `ogr2ogr -f "ESRI Shapefile" #{srid_params(options)} #{output_file} #{input_file}`
   end
 
   desc "features", "Get the feature count from a file."
@@ -103,6 +103,14 @@ class OgrTool < Thor
         'options'   => "'-c client_encoding=#{options[:encoding]}'"
       }.reject{|k,v| v.nil?})
       config.reject{|k,v| v.nil?}.map{ |k,v| "#{k}=#{v}" }.join(' ')
+    end
+
+    def srid_params(options)
+      srid_params = []
+      srid_params << "-s_srs EPSG:#{options[:source]}" if options[:source]
+      srid_params << "-t_srs EPSG:#{options[:transform]}" if options[:transform]
+      srid_params << "-a_srs EPSG:#{options[:assign]}" if options[:assign]
+      srid_params = srid_params.join(' ')
     end
   end
   
