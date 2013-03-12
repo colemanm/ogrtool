@@ -37,6 +37,7 @@ class OgrTool < Thor
   method_option :file, :aliases => '-f', :desc => "File to import", :required => true
   method_option :layer, :aliases => '-l', :desc => "Layer name to import"
   method_option :connection, :aliases => '-c', :desc => "Connection name (defined in ~/.postgres)", :default => 'localhost'
+  method_option :append, :aliases => '-A', :desc => "Append to existing data table"
   method_option :source, :aliases => '-s', :desc => "Source SRID to convert from"
   method_option :transform, :aliases => '-t', :desc => "Destination SRID to tranform to"
   method_option :assign, :aliases => '-a', :desc => "Assign this SRID on table creation"
@@ -52,6 +53,7 @@ class OgrTool < Thor
     nlt = "-nlt #{options[:type]}" if options[:type]
     nln = "-nln #{options[:nln]}" if options[:nln]
     lco = "-lco GEOMETRY_NAME=#{options[:geometry]}" if options[:geometry]
+    append = "-append" if options[:append]
     srid_params = []
       srid_params << "-s_srs EPSG:#{options[:source]}" if options[:source]
       srid_params << "-t_srs EPSG:#{options[:transform]}" if options[:transform]
@@ -59,7 +61,7 @@ class OgrTool < Thor
       srid_params = srid_params.join(' ')
     overwrite = "-overwrite" if options[:overwrite]
     skipfailures = "-skipfailures" if options[:skipfailures]
-    `ogr2ogr -f "PostgreSQL" #{srid_params} PG:"#{db_config(options)}" #{options[:file]} #{layer} #{nlt} #{nln} #{lco} #{overwrite} #{skipfailures}`
+    `ogr2ogr -f "PostgreSQL" #{srid_params} PG:"#{db_config(options)}" #{options[:file]} #{layer} #{nlt} #{nln} #{lco} #{overwrite} #{append} #{skipfailures}`
   end
 
   desc "shproject", "Reproject a shapefile using source and destination SRS EPSG codes."
