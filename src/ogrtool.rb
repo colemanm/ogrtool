@@ -8,6 +8,12 @@ require 'yaml'
 
 class OgrTool < Thor
 
+  desc "info", "Show info summary about dataset."
+  method_option :file, :aliases => "-f", :desc => "File from which to show info."
+  def info
+    `ogrinfo -so -al #{options[:file]}`
+  end
+
   desc "clip", "Clip an area from a shapefile. Use 'x_min y_min x_max y_max' notation to define the bounding box."
   method_option :bbox, :aliases => '-b', :desc => "Define the bounding area (e.g. \"498438 395921 566498 471747\" in dataset units)", :required => true
   method_option :file, :aliases => '-f', :desc => "File to clip an area from", :required => true
@@ -17,7 +23,7 @@ class OgrTool < Thor
     bb = options[:bbox]
     `ogr2ogr -f "ESRI Shapefile" #{output_file} #{input_file} -clipsrc #{bb}`
   end
-  
+
   desc "clip2shp", "Takes a list of PostGIS layers and clips by bounding area to shapefiles."
   method_option :bbox, :aliases => '-b', :desc => "Define the bounding area (e.g. \"498438 395921 566498 471747\")", :required => true
   method_option :list, :aliases => '-l', :desc => "List of layer names to export as shapefiles", :required => true
@@ -115,7 +121,7 @@ class OgrTool < Thor
       srid_params = srid_params.join(' ')
     end
   end
-  
+
 end
 
 OgrTool.start
