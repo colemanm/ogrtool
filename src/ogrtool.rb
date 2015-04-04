@@ -39,6 +39,15 @@ class OgrTool < Thor
     end
   end
 
+  desc "project", "Reproject a file"
+  method_option :file, aliases: "-f", desc: "File to import", required: true
+  method_option :source, aliases: "-s", desc: "Source SRID"
+  method_option :transform, aliases: "-t", desc: "Destination SRID"
+  def project
+    type = detect_filetype(options[:file])
+    `ogr2ogr -f "#{type}" #{File.basename(options[:file], File.extname(options[:file]))}_#{options[:transform]}#{File.extname(options[:file])} #{options[:file]} -s_srs EPSG:#{options[:source]} -t_srs EPSG:#{options[:transform]}`
+  end
+
   desc "topg", "Import a GIS data file into PostGIS."
   method_option :file, :aliases => '-f', :desc => "File to import", :required => true
   method_option :layer, :aliases => '-l', :desc => "Layer name to import"
@@ -119,6 +128,28 @@ class OgrTool < Thor
       srid_params << "-t_srs EPSG:#{options[:transform]}" if options[:transform]
       srid_params << "-a_srs EPSG:#{options[:assign]}" if options[:assign]
       srid_params = srid_params.join(' ')
+    end
+
+    def detect_filetype(file)
+      type = File.extname(file)
+      case type
+      when ".geojson"
+        return "GeoJSON"
+      when ".shp"
+        return "ESRI Shapefile"
+      when ".osm"
+        return "OSM"
+      when ".gdb"
+        return "FileGDB"
+      when ".gpx"
+        return "GPX"
+      when ".sqlite"
+        return "SQLite"
+      when ".csv"
+        return "CSV"
+      when ".mdb"
+        return "MDB"
+      end
     end
   end
 
